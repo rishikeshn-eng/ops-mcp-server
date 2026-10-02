@@ -1,0 +1,8 @@
+[project]
+name = "ops-mcp-server"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["mcp>=2", "duckdb", "pandas"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ops MCP Server</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1c1c1a;--mut:#6b6b66;--card:#fff;--bd:#e3e2dc;--ac:#2a6f6b;--warn:#c2410c}
+@media(prefers-color-scheme:dark){:root{--bg:#161614;--fg:#ecebe6;--mut:#9a9992;--card:#1f1f1c;--bd:#33332f;--ac:#6cc2bc;--warn:#fb923c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px 64px}h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px}
+.sub{color:var(--mut);margin:0 0 16px}.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--bd);vertical-align:top}th{color:var(--mut)}
+code,pre{font:12px/1.5 ui-monospace,monospace}pre{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px;overflow:auto}
+.ok{color:var(--ac);font-weight:600}.bad{color:var(--warn);font-weight:600}.kp{display:flex;gap:24px;flex-wrap:wrap}.kp b{font-size:22px;display:block}.kp span{color:var(--mut);font-size:12.5px}
+.note{font-size:12.5px;color:var(--mut)}.pill{border:1px solid var(--bd);border-radius:99px;padding:0 8px;font-size:11.5px}
+@media(max-width:600px){.hide-s{display:none}}
+</style></head><body><main>
+<h1>Ops MCP Server</h1>
+<p class="sub">A read-only, audited MCP server that exposes an ops warehouse (log templates, drive failure risk, VM rightsizing) as tools any agent can call.</p>
+<div class="card kp" id="kp"></div>
+<h2>Tools <span class="note">by role</span></h2>
+<div class="card"><table id="tools"></table><p class="note">A role only sees the tools it may call: a tool that isn't registered can't be prompt-injected into use. The warehouse data comes from the published results of logmine-bench, drive-early-warning and vm-rightsizer (snapshots in the repo).</p></div>
+<h2>Safety model</h2>
+<div class="card"><ul>
+<li><b>Read-only by construction.</b> Each role gets its own in-memory DuckDB copy with <code>enable_external_access=false</code> and locked configuration: no file reads, no writes that persist, no ATTACH.</li>
+<li><b>SQL guard</b> (analyst only): exactly one statement, type SELECT, a keyword/table-function denylist, row cap 500, 5 s timeout that cancels the query.</li>
+<li><b>Least privilege.</b> Default role is <code>viewer</code>: curated tools only, example log lines have IPs and hostnames redacted.</li>
+<li><b>Audit log.</b> Every call, including refusals, is appended to a JSONL file with a SHA-256 hash chain; editing, deleting or reordering a record breaks verification.</li></ul></div>
+<h2>Evaluation <span class="note">30 tasks: 22 data, 8 safety</span></h2>
+<div class="card"><table id="ev"></table>
+<p class="note">These runs execute a <i>reference plan</i> per task through a real MCP client and compare with answers computed from the raw tables with pandas. They validate the tools and the guardrails. They do not measure how well an LLM agent uses the tools: <code>python -m opsmcp.agent_eval</code> does that with Gemini, and has not been run (no API key at build time).</p></div>
+<h2>Connect it</h2>
+<div class="card"><pre>{
+  "mcpServers": {
+    "ops-warehouse": {
+      "command": "python",
+      "args": ["-m", "opsmcp"],
+      "env": { "OPS_MCP_ROLE": "viewer", "OPS_MCP_AUDIT": "audit/audit.jsonl" }
+    }
+  }
+}</pre></div>
+<h2>Sample audit trail</h2>
+<div class="card"><pre id="audit"></pre></div>
+</main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D=JSON.parse(document.getElementById('data').textContent),$=id=>document.getElementById(id),esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const pass=D.eval.filter(r=>r.passed).length;
+$('kp').innerHTML=`<div><b>${pass}/${D.eval.length}</b><span>reference tasks passing</span></div><div><b>${D.tools.length}</b><span>tools (analyst)</span></div><div><b>${D.viewer_tools}</b><span>tools (viewer)</span></div><div><b>${D.denied}</b><span>refusals logged in sample</span></div>`;
+$('tools').innerHTML='<tr><th>Tool</th><th>Roles</th><th>What it does</th></tr>'+D.tools.map(t=>`<tr><td><code>${t.name}</code></td><td>${t.viewer?'viewer, analyst':'analyst'}</td><td>${esc(t.description)}</td></tr>`).join('');
+$('ev').innerHTML='<tr><th>#</th><th>Task</th><th class="hide-s">Result</th><th></th></tr>'+D.eval.map(r=>`<tr><td>${r.id}</td><td>${esc(r.question)}</td><td class="hide-s"><code>${esc(r.detail.slice(0,80))}</code></td><td class="${r.passed?'ok':'bad'}">${r.passed?'pass':'FAIL'}</td></tr>`).join('');
+$('audit').textContent=D.audit.map(a=>JSON.stringify({ts:a.ts,role:a.role,tool:a.tool,args:a.args,status:a.status,error:a.error,hash:a.hash.slice(0,12)+'…'})).join('\n');
+</script></body></html>
