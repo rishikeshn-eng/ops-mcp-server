@@ -6,3 +6,4 @@ dependencies = ["mcp>=2", "duckdb", "pandas"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
