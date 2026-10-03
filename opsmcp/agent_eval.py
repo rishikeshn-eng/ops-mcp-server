@@ -23,13 +23,20 @@ MAX_STEPS = 8
 
 
 def _http(body: dict) -> dict:
+    import time
+    import urllib.error
     model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-    req = urllib.request.Request(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-        data=json.dumps(body).encode(), method="POST",
-        headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=90) as r:
-        return json.load(r)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    for i in range(5):
+        req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]})
+        try:
+            with urllib.request.urlopen(req, timeout=90) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 500, 502, 503, 504) or i == 4:
+                raise
+        time.sleep(min(60, 2 ** (i + 1)))
 
 
 def _schema(s: dict) -> dict:
@@ -91,7 +98,10 @@ async def run_all(transport=_http, role_tasks=None) -> list[dict]:
 
 
 def main():
+    import sys
     rows = asyncio.run(run_all())
+    if "--out" in sys.argv:
+        Path(sys.argv[sys.argv.index("--out") + 1]).write_text(json.dumps(rows, indent=1))
     for r in rows:
         print("PASS" if r["passed"] else "FAIL", r["id"], f"{r['tool_calls']} calls", r["answer"][:80].replace("\n", " "))
     print(f"{sum(r['passed'] for r in rows)}/{len(rows)} correct, {sum(r['tokens'] for r in rows)} tokens")
