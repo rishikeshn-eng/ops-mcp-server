@@ -5,7 +5,7 @@ A read-only, audited [MCP](https://modelcontextprotocol.io) server that exposes 
 | table(s) | source |
 |---|---|
 | `log_benchmark`, `log_templates` | [logmine-bench](https://github.com/rishikeshn-eng/logmine-bench) (real LogHub-2k) |
-| `drive_queue`, `drive_pods`, `drive_policy` | [drive-early-warning](https://github.com/rishikeshn-eng/drive-early-warning) (synthetic fleet) |
+| `drive_queue`, `drive_pods`, `drive_policy` | [drive-early-warning](https://github.com/rishikeshn-eng/drive-early-warning) (real Backblaze sample) |
 | `vm_recommendations`, `vm_policies` | [vm-rightsizer](https://github.com/rishikeshn-eng/vm-rightsizer) (synthetic fleet) |
 
 **Docs page:** https://rishikeshn-eng.github.io/ops-mcp-server/ (tool catalog, the 30-task results, a sample audit trail)

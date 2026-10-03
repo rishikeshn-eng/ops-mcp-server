@@ -17,7 +17,7 @@ SNAP = Path(__file__).resolve().parent.parent / "snapshots"
 DESCRIPTIONS = {
     "log_benchmark": "Per-dataset log parsing benchmark (LogHub-2k): Drain grouping accuracy vs published baseline.",
     "log_templates": "Mined log templates per dataset with counts, spike windows and one example raw line.",
-    "drive_queue": "Top-25 highest-risk drives from the latest scored week (synthetic Backblaze-schema fleet).",
+    "drive_queue": "Top-25 highest-risk drives from the latest scored week (real Backblaze data, Q4 2024 + Q1 2025 sample).",
     "drive_pods": "Mean predicted risk and high-risk drive counts by pod and rack.",
     "drive_policy": "Replacement policy backtest per horizon, priced in rupees.",
     "vm_recommendations": "Largest VM downsizing recommendations with observed vs forecast peaks (synthetic fleet).",
